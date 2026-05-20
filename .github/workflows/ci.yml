@@ -31,6 +31,9 @@ jobs:
       - name: Install backend dependencies
         run: npm ci
 
+      - name: Run backend tests (Backend/tests)
+        run: npm test -- tests
+
       - name: Check backend start script
         run: npm run start -- --help || echo "Backend start script exists"
 
@@ -56,3 +59,26 @@ jobs:
 
       - name: Build frontend
         run: npm run build
+
+  docker-ci:
+    name: Docker Image CI
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Build backend Docker image
+        run: docker build -t task-manager-backend:test ./Backend
+
+      - name: Build frontend Docker image
+        run: docker build -t task-manager-frontend:test ./Frontend
+
+      - name: Smoke test backend image
+        run: docker run --rm task-manager-backend:test npm test -- tests/auth.test.js tests/task.test.js
+
+      - name: Smoke test frontend image
+        run: docker run --rm task-manager-frontend:test npm run build
