@@ -1,18 +1,62 @@
-# React + Vite
+﻿# Frontend Documentation - Task Manager UI
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Had `Frontend` howa React app mabni b `Vite + React Router` w kaytwasal m3a backend API.
 
-Currently, two official plugins are available:
+Features li tkhadmo:
+- Register (`POST /api/auth/register`)
+- Login (`POST /api/auth/login`)
+- Protected tasks page (create/get/update/delete)
+- Backend health check (`GET /`)
+- Route guards: ila user ma loginch, ay protected URL katrj3o direct l login
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Routes (Frontend)
 
-## React Compiler
+- `/login`
+- `/register`
+- `/tasks` (protected)
+- `/` -> redirect to `/tasks` ila user login, sinon `/login`
 
-The React Compiler is enabled on this template. See [this documentation](https://react.dev/learn/react-compiler) for more information.
+## API Endpoints used
 
-Note: This will impact Vite dev & build performances.
+- `GET /`
+- `POST /api/auth/register`
+- `POST /api/auth/login`
+- `POST /api/tasks`
+- `GET /api/tasks`
+- `PUT /api/tasks/:id`
+- `DELETE /api/tasks/:id`
 
-## Expanding the ESLint configuration
+## UI Stack
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+- Bootstrap 5 CDN
+- Bootstrap Icons CDN
+- Custom CSS theme (responsive)
+
+## Environment
+
+Create `.env` in `Frontend/` (optional):
+
+```env
+VITE_API_URL=http://localhost:5000
+```
+
+Ila makaynch, frontend kay defaulti had URL.
+
+## Run
+
+```bash
+npm install
+npm run dev
+```
+
+Build:
+
+```bash
+npm run build
+```
+
+Lint:
+
+```bash
+npm run lint
+```
