@@ -19,6 +19,7 @@ services:
     build:
       context: ./Backend
     container_name: backend_api
+    command: sh -c "npm install && npm run dev"
     ports:
       - "5000:5000"
     volumes:
