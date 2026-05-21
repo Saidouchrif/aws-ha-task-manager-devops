@@ -1,50 +1,41 @@
-﻿const API_BASE_URL = (import.meta.env.VITE_API_URL || "http://localhost:5000").replace(/\/$/, "");
+﻿import http from "../api";
 
-const buildHeaders = (token, includeJson = true) => {
-  const headers = {};
-
-  if (includeJson) {
-    headers["Content-Type"] = "application/json";
-  }
-
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
-  }
-
-  return headers;
-};
-
-const parseResponse = async (response) => {
-  const contentType = response.headers.get("content-type") || "";
-  const isJson = contentType.includes("application/json");
-  const data = isJson ? await response.json() : null;
-
-  if (!response.ok) {
-    const message = data?.message || "Request failed";
-    const error = new Error(message);
-    error.status = response.status;
-    throw error;
-  }
-
-  return data;
-};
-
-const request = async (path, { method = "GET", body, token } = {}) => {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    method,
-    headers: buildHeaders(token, body !== undefined),
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-  });
-
-  return parseResponse(response);
-};
+const authConfig = (token) =>
+  token
+    ? {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    : {};
 
 export const api = {
-  getHealth: () => request("/"),
-  register: (payload) => request("/api/auth/register", { method: "POST", body: payload }),
-  login: (payload) => request("/api/auth/login", { method: "POST", body: payload }),
-  getTasks: (token) => request("/api/tasks", { token }),
-  createTask: (token, payload) => request("/api/tasks", { method: "POST", token, body: payload }),
-  updateTask: (token, id, payload) => request(`/api/tasks/${id}`, { method: "PUT", token, body: payload }),
-  deleteTask: (token, id) => request(`/api/tasks/${id}`, { method: "DELETE", token }),
+  getHealth: async () => {
+    const { data } = await http.get("/");
+    return data;
+  },
+  register: async (payload) => {
+    const { data } = await http.post("/api/auth/register", payload);
+    return data;
+  },
+  login: async (payload) => {
+    const { data } = await http.post("/api/auth/login", payload);
+    return data;
+  },
+  getTasks: async (token) => {
+    const { data } = await http.get("/api/tasks", authConfig(token));
+    return data;
+  },
+  createTask: async (token, payload) => {
+    const { data } = await http.post("/api/tasks", payload, authConfig(token));
+    return data;
+  },
+  updateTask: async (token, id, payload) => {
+    const { data } = await http.put(`/api/tasks/${id}`, payload, authConfig(token));
+    return data;
+  },
+  deleteTask: async (token, id) => {
+    const { data } = await http.delete(`/api/tasks/${id}`, authConfig(token));
+    return data;
+  },
 };
