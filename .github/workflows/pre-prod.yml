@@ -85,6 +85,15 @@ jobs:
             cd "${DEPLOY_PATH}"
             git checkout pre/production
             git pull origin pre/production
+            cat > Backend/.env <<'ENVEOF'
+            PORT=5000
+            DB_HOST=postgres
+            DB_PORT=5432
+            DB_USER=${{ secrets.DB_USER }}
+            DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+            DB_NAME=${{ secrets.DB_NAME }}
+            JWT_SECRET=${{ secrets.JWT_SECRET }}
+            ENVEOF
             sudo docker-compose down
             sudo docker-compose up -d --build
           EOF
@@ -109,6 +118,15 @@ jobs:
             cd "${DEPLOY_PATH}"
             git checkout pre/production
             git pull origin pre/production
+            cat > Backend/.env <<'ENVEOF'
+            PORT=5000
+            DB_HOST=postgres
+            DB_PORT=5432
+            DB_USER=${{ secrets.DB_USER }}
+            DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+            DB_NAME=${{ secrets.DB_NAME }}
+            JWT_SECRET=${{ secrets.JWT_SECRET }}
+            ENVEOF
             sudo docker-compose down
             sudo docker-compose up -d --build
           EOF
