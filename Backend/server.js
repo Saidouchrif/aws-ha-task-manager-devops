@@ -8,8 +8,8 @@ const {
   checkDatabaseConnection,
 } = require("./config/db");
 
-require("./models/userModel");
-require("./models/taskModel");
+require("./Models/userModel");
+require("./Models/taskModel");
 
 const routes = require("./routes");
 
