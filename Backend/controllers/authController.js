@@ -45,6 +45,12 @@ const login = async (req, res) => {
 
     const { email, password } = req.body;
 
+    if (!email || !password) {
+      return res.status(400).json({
+        message: "Email and password are required",
+      });
+    }
+
     const user = await User.findOne({
       where: { email },
     });
@@ -66,6 +72,13 @@ const login = async (req, res) => {
       });
     }
 
+    if (!process.env.JWT_SECRET) {
+      console.error("Login error: JWT_SECRET is not set");
+      return res.status(500).json({
+        message: "Server configuration error",
+      });
+    }
+
     const token = jwt.sign(
       {
         id: user.id,
@@ -83,6 +96,7 @@ const login = async (req, res) => {
     });
 
   } catch (error) {
+    console.error("Login error:", error);
 
     res.status(500).json({
       message: "Server error",
