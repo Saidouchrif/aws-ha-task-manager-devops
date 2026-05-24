@@ -3,7 +3,7 @@
 on:
   push:
     branches:
-      - pre_prod
+      - pre/production
 
 permissions:
   contents: read
@@ -14,7 +14,7 @@ concurrency:
 
 env:
   DEPLOY_PATH: /home/ubuntu/aws-ha-task-manager-devops
-  DEPLOY_BRANCH: pre_prod
+  DEPLOY_BRANCH: pre/production
   REPO_URL: https://github.com/Saidouchrif/aws-ha-task-manager-devops.git
 
 jobs:
