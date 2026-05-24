@@ -109,7 +109,7 @@ jobs:
             fi
             {
               echo "VITE_API_URL=http://ha-load-balancer-113284686.us-east-1.elb.amazonaws.com"
-              echo "VITE_INTERNAL_API_URL=http://backend_api:5000"
+              echo "VITE_INTERNAL_API_URL=http://host.docker.internal:5000"
             } > Frontend/.env
             sudo docker rm -f postgres_db pgadmin || true
             sudo docker-compose -f docker-compose.app.yml down
@@ -177,7 +177,7 @@ jobs:
             fi
             {
               echo "VITE_API_URL=http://ha-load-balancer-113284686.us-east-1.elb.amazonaws.com"
-              echo "VITE_INTERNAL_API_URL=http://backend_api:5000"
+              echo "VITE_INTERNAL_API_URL=http://host.docker.internal:5000"
             } > Frontend/.env
             sudo docker rm -f postgres_db pgadmin || true
             sudo docker-compose -f docker-compose.app.yml down
