@@ -114,6 +114,19 @@ jobs:
             sudo docker rm -f postgres_db pgadmin || true
             sudo docker-compose -f docker-compose.app.yml down
             sudo docker-compose -f docker-compose.app.yml up -d --build
+            READY=0
+            for i in $(seq 1 20); do
+              if curl -fsS http://127.0.0.1:5000/ >/dev/null; then
+                READY=1
+                break
+              fi
+              sleep 3
+            done
+            if [ "$READY" -ne 1 ]; then
+              echo "backend_api did not become healthy on server 1"
+              sudo docker logs backend_api --tail=120 || true
+              exit 1
+            fi
             sudo docker exec frontend_app cat /app/.env
             if sudo docker ps --format '{{.Names}}' | grep -E '^(postgres_db|pgadmin)$'; then
               echo "Local DB containers are still running on server 1"
@@ -182,6 +195,19 @@ jobs:
             sudo docker rm -f postgres_db pgadmin || true
             sudo docker-compose -f docker-compose.app.yml down
             sudo docker-compose -f docker-compose.app.yml up -d --build
+            READY=0
+            for i in $(seq 1 20); do
+              if curl -fsS http://127.0.0.1:5000/ >/dev/null; then
+                READY=1
+                break
+              fi
+              sleep 3
+            done
+            if [ "$READY" -ne 1 ]; then
+              echo "backend_api did not become healthy on server 2"
+              sudo docker logs backend_api --tail=120 || true
+              exit 1
+            fi
             sudo docker exec frontend_app cat /app/.env
             if sudo docker ps --format '{{.Names}}' | grep -E '^(postgres_db|pgadmin)$'; then
               echo "Local DB containers are still running on server 2"
