@@ -35,6 +35,7 @@ services:
       DB_USER: admin
       DB_PASSWORD: admin123
       DB_NAME: taskmanager
+      JWT_SECRET: ${JWT_SECRET:-supersecretkey}
     restart: unless-stopped
 
   postgres:

@@ -1,0 +1,279 @@
+﻿name: Pre-Prod Pipeline
+
+on:
+  push:
+    branches:
+      - pre/production
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pre-prod-deploy
+  cancel-in-progress: true
+
+env:
+  DEPLOY_PATH: /home/ubuntu/aws-ha-task-manager-devops
+  DEPLOY_BRANCH: pre/production
+  REPO_URL: https://github.com/Saidouchrif/aws-ha-task-manager-devops.git
+
+jobs:
+  test-suite:
+    name: Test Suite
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: |
+            Backend/package-lock.json
+            Frontend/package-lock.json
+
+      - name: Install backend dependencies
+        working-directory: Backend
+        run: npm ci
+
+      - name: Run backend tests
+        working-directory: Backend
+        run: npm test -- tests
+
+      - name: Install frontend dependencies
+        working-directory: Frontend
+        run: npm ci
+
+      - name: Lint frontend
+        working-directory: Frontend
+        run: npm run lint
+
+      - name: Build frontend
+        working-directory: Frontend
+        run: npm run build
+
+      - name: Build backend Docker image
+        run: docker build -t task-manager-backend:preprod ./Backend
+
+      - name: Build frontend Docker image
+        run: docker build -t task-manager-frontend:preprod ./Frontend
+
+      - name: Smoke test backend image
+        run: docker run --rm task-manager-backend:preprod npm test -- tests/auth.test.js tests/task.test.js
+
+      - name: Smoke test frontend image
+        run: docker run --rm task-manager-frontend:preprod npm run build
+
+  deploy-app-server-1:
+    name: Deploy App Server 1
+    runs-on: ubuntu-latest
+    needs:
+      - test-suite
+      - deploy-db-server
+
+    steps:
+      - name: Configure SSH key
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s' "${{ secrets.EC2_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H "${{ secrets.EC2_HOST_1 }}" >> ~/.ssh/known_hosts
+
+      - name: Deploy app stack to server 1
+        run: |
+          ssh "${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST_1 }}" << EOF
+            set -e
+            if [ ! -d "${DEPLOY_PATH}" ]; then
+              git clone -b ${DEPLOY_BRANCH} ${REPO_URL} ${DEPLOY_PATH}
+            fi
+            cd "${DEPLOY_PATH}"
+            git checkout ${DEPLOY_BRANCH}
+            git pull origin ${DEPLOY_BRANCH}
+            cat > Backend/.env <<'ENVEOF'
+            PORT=5000
+            DB_HOST=${{ secrets.DB_HOST }}
+            DB_PORT=5432
+            DB_USER=${{ secrets.DB_USER }}
+            DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+            DB_NAME=${{ secrets.DB_NAME }}
+            JWT_SECRET=${{ secrets.JWT_SECRET }}
+            ENVEOF
+            echo "Backend .env DB_HOST on server 1:"
+            grep '^DB_HOST=' Backend/.env
+            if ! grep -qx "DB_HOST=${{ secrets.DB_HOST }}" Backend/.env; then
+              echo "DB_HOST mismatch on server 1"
+              exit 1
+            fi
+            {
+              echo "VITE_API_URL=http://ha-load-balancer-113284686.us-east-1.elb.amazonaws.com"
+              echo "VITE_INTERNAL_API_URL=http://host.docker.internal:5000"
+            } > Frontend/.env
+            sudo docker rm -f postgres_db pgadmin || true
+            sudo docker-compose -f docker-compose.app.yml down
+            sudo docker-compose -f docker-compose.app.yml up -d --build
+            READY=0
+            for i in $(seq 1 20); do
+              if curl -fsS http://127.0.0.1:5000/ >/dev/null; then
+                READY=1
+                break
+              fi
+              sleep 3
+            done
+            if [ "$READY" -ne 1 ]; then
+              echo "backend_api did not become healthy on server 1"
+              sudo docker logs backend_api --tail=120 || true
+              exit 1
+            fi
+            sudo docker exec frontend_app cat /app/.env
+            if sudo docker ps --format '{{.Names}}' | grep -E '^(postgres_db|pgadmin)$'; then
+              echo "Local DB containers are still running on server 1"
+              exit 1
+            fi
+            if ! sudo docker ps --format '{{.Names}}' | grep -qx 'frontend_app'; then
+              echo "frontend_app is not running on server 1"
+              exit 1
+            fi
+            if ! sudo docker ps --format '{{.Names}}' | grep -qx 'backend_api'; then
+              echo "backend_api is not running on server 1"
+              exit 1
+            fi
+            DB_HOST_RUNTIME=$(sudo docker exec backend_api printenv DB_HOST)
+            echo "Backend container DB_HOST=$DB_HOST_RUNTIME"
+            if [ "$DB_HOST_RUNTIME" != "${{ secrets.DB_HOST }}" ]; then
+              echo "backend_api DB_HOST mismatch on server 1"
+              exit 1
+            fi
+          EOF
+
+  deploy-app-server-2:
+    name: Deploy App Server 2
+    runs-on: ubuntu-latest
+    needs:
+      - test-suite
+      - deploy-db-server
+
+    steps:
+      - name: Configure SSH key
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s' "${{ secrets.EC2_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H "${{ secrets.EC2_HOST_2 }}" >> ~/.ssh/known_hosts
+
+      - name: Deploy app stack to server 2
+        run: |
+          ssh "${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST_2 }}" << EOF
+            set -e
+            if [ ! -d "${DEPLOY_PATH}" ]; then
+              git clone -b ${DEPLOY_BRANCH} ${REPO_URL} ${DEPLOY_PATH}
+            fi
+            cd "${DEPLOY_PATH}"
+            git checkout ${DEPLOY_BRANCH}
+            git pull origin ${DEPLOY_BRANCH}
+            cat > Backend/.env <<'ENVEOF'
+            PORT=5000
+            DB_HOST=${{ secrets.DB_HOST }}
+            DB_PORT=5432
+            DB_USER=${{ secrets.DB_USER }}
+            DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+            DB_NAME=${{ secrets.DB_NAME }}
+            JWT_SECRET=${{ secrets.JWT_SECRET }}
+            ENVEOF
+            echo "Backend .env DB_HOST on server 2:"
+            grep '^DB_HOST=' Backend/.env
+            if ! grep -qx "DB_HOST=${{ secrets.DB_HOST }}" Backend/.env; then
+              echo "DB_HOST mismatch on server 2"
+              exit 1
+            fi
+            {
+              echo "VITE_API_URL=http://ha-load-balancer-113284686.us-east-1.elb.amazonaws.com"
+              echo "VITE_INTERNAL_API_URL=http://host.docker.internal:5000"
+            } > Frontend/.env
+            sudo docker rm -f postgres_db pgadmin || true
+            sudo docker-compose -f docker-compose.app.yml down
+            sudo docker-compose -f docker-compose.app.yml up -d --build
+            READY=0
+            for i in $(seq 1 20); do
+              if curl -fsS http://127.0.0.1:5000/ >/dev/null; then
+                READY=1
+                break
+              fi
+              sleep 3
+            done
+            if [ "$READY" -ne 1 ]; then
+              echo "backend_api did not become healthy on server 2"
+              sudo docker logs backend_api --tail=120 || true
+              exit 1
+            fi
+            sudo docker exec frontend_app cat /app/.env
+            if sudo docker ps --format '{{.Names}}' | grep -E '^(postgres_db|pgadmin)$'; then
+              echo "Local DB containers are still running on server 2"
+              exit 1
+            fi
+            if ! sudo docker ps --format '{{.Names}}' | grep -qx 'frontend_app'; then
+              echo "frontend_app is not running on server 2"
+              exit 1
+            fi
+            if ! sudo docker ps --format '{{.Names}}' | grep -qx 'backend_api'; then
+              echo "backend_api is not running on server 2"
+              exit 1
+            fi
+            DB_HOST_RUNTIME=$(sudo docker exec backend_api printenv DB_HOST)
+            echo "Backend container DB_HOST=$DB_HOST_RUNTIME"
+            if [ "$DB_HOST_RUNTIME" != "${{ secrets.DB_HOST }}" ]; then
+              echo "backend_api DB_HOST mismatch on server 2"
+              exit 1
+            fi
+          EOF
+
+  deploy-db-server:
+    name: Deploy DB Server 3
+    runs-on: ubuntu-latest
+    needs: test-suite
+
+    steps:
+      - name: Configure SSH key
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s' "${{ secrets.EC2_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H "${{ secrets.EC2_HOST_3 }}" >> ~/.ssh/known_hosts
+
+      - name: Deploy db stack to server 3
+        run: |
+          ssh "${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST_3 }}" << EOF
+            set -e
+            if [ ! -d "${DEPLOY_PATH}" ]; then
+              git clone -b ${DEPLOY_BRANCH} ${REPO_URL} ${DEPLOY_PATH}
+            fi
+            cd "${DEPLOY_PATH}"
+            git checkout ${DEPLOY_BRANCH}
+            git pull origin ${DEPLOY_BRANCH}
+            {
+              echo "DB_USER=${{ secrets.DB_USER }}"
+              echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}"
+              echo "DB_NAME=${{ secrets.DB_NAME }}"
+              echo "PGADMIN_DEFAULT_EMAIL=${{ secrets.PGADMIN_DEFAULT_EMAIL }}"
+              echo "PGADMIN_DEFAULT_PASSWORD=${{ secrets.PGADMIN_DEFAULT_PASSWORD }}"
+            } > .env
+            sudo docker ps -aq --filter "name=pgadmin" | xargs -r sudo docker rm -f || true
+            sudo docker ps -aq --filter "label=com.docker.compose.service=pgadmin" | xargs -r sudo docker rm -f || true
+            if sudo docker compose version >/dev/null 2>&1; then
+              sudo docker compose -f docker-compose.db.yml up -d postgres
+              sudo docker compose -f docker-compose.db.yml up -d pgadmin
+            else
+              sudo docker-compose -f docker-compose.db.yml up -d postgres
+              sudo docker-compose -f docker-compose.db.yml up -d pgadmin
+            fi
+            if ! sudo docker ps --format '{{.Names}}' | grep -qx 'postgres_db'; then
+              echo "postgres_db is not running on DB server"
+              exit 1
+            fi
+            if ! sudo docker ps --format '{{.Names}}' | grep -qx 'pgadmin'; then
+              echo "pgadmin is not running on DB server"
+              exit 1
+            fi
+          EOF
