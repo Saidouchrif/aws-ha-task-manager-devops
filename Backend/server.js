@@ -62,9 +62,13 @@ const startServer = async () => {
     await sequelize.sync();
     console.log("Database synchronized");
 
-    app.listen(PORT, () => {
+    const server = app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
     });
+
+    // Keep these above ALB idle timeout to avoid intermittent 502 due to closed upstream sockets.
+    server.keepAliveTimeout = 65000;
+    server.headersTimeout = 66000;
   } catch (error) {
     console.error("Server startup failed:", error);
     process.exit(1);
