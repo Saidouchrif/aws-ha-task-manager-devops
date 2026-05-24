@@ -227,9 +227,21 @@ jobs:
               echo "PGADMIN_DEFAULT_EMAIL=${{ secrets.PGADMIN_DEFAULT_EMAIL }}"
               echo "PGADMIN_DEFAULT_PASSWORD=${{ secrets.PGADMIN_DEFAULT_PASSWORD }}"
             } > .env
-            sudo docker rm -f pgadmin || true
-            sudo docker-compose -f docker-compose.db.yml up -d postgres
-            sudo docker-compose -f docker-compose.db.yml up -d pgadmin
+            if sudo docker compose version >/dev/null 2>&1; then
+              DC="sudo docker compose"
+            else
+              DC="sudo docker-compose"
+            fi
+            PGADMIN_BY_NAME=$(sudo docker ps -aq --filter "name=pgadmin")
+            if [ -n "$PGADMIN_BY_NAME" ]; then
+              sudo docker rm -f $PGADMIN_BY_NAME || true
+            fi
+            PGADMIN_BY_LABEL=$(sudo docker ps -aq --filter "label=com.docker.compose.service=pgadmin")
+            if [ -n "$PGADMIN_BY_LABEL" ]; then
+              sudo docker rm -f $PGADMIN_BY_LABEL || true
+            fi
+            $DC -f docker-compose.db.yml up -d postgres
+            $DC -f docker-compose.db.yml up -d pgadmin
             if ! sudo docker ps --format '{{.Names}}' | grep -qx 'postgres_db'; then
               echo "postgres_db is not running on DB server"
               exit 1
