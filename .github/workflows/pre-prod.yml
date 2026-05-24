@@ -3,7 +3,7 @@
 on:
   push:
     branches:
-      - pre/production
+      - pre_prod
 
 permissions:
   contents: read
@@ -14,6 +14,8 @@ concurrency:
 
 env:
   DEPLOY_PATH: /home/ubuntu/aws-ha-task-manager-devops
+  DEPLOY_BRANCH: pre_prod
+  REPO_URL: https://github.com/Saidouchrif/aws-ha-task-manager-devops.git
 
 jobs:
   test-suite:
@@ -84,9 +86,12 @@ jobs:
         run: |
           ssh "${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST_1 }}" << EOF
             set -e
+            if [ ! -d "${DEPLOY_PATH}" ]; then
+              git clone -b ${DEPLOY_BRANCH} ${REPO_URL} ${DEPLOY_PATH}
+            fi
             cd "${DEPLOY_PATH}"
-            git checkout pre/production
-            git pull origin pre/production
+            git checkout ${DEPLOY_BRANCH}
+            git pull origin ${DEPLOY_BRANCH}
             cat > Backend/.env <<'ENVEOF'
             PORT=5000
             DB_HOST=${{ secrets.DB_HOST }}
@@ -119,9 +124,12 @@ jobs:
         run: |
           ssh "${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST_2 }}" << EOF
             set -e
+            if [ ! -d "${DEPLOY_PATH}" ]; then
+              git clone -b ${DEPLOY_BRANCH} ${REPO_URL} ${DEPLOY_PATH}
+            fi
             cd "${DEPLOY_PATH}"
-            git checkout pre/production
-            git pull origin pre/production
+            git checkout ${DEPLOY_BRANCH}
+            git pull origin ${DEPLOY_BRANCH}
             cat > Backend/.env <<'ENVEOF'
             PORT=5000
             DB_HOST=${{ secrets.DB_HOST }}
@@ -152,9 +160,12 @@ jobs:
         run: |
           ssh "${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST_3 }}" << EOF
             set -e
+            if [ ! -d "${DEPLOY_PATH}" ]; then
+              git clone -b ${DEPLOY_BRANCH} ${REPO_URL} ${DEPLOY_PATH}
+            fi
             cd "${DEPLOY_PATH}"
-            git checkout pre/production
-            git pull origin pre/production
+            git checkout ${DEPLOY_BRANCH}
+            git pull origin ${DEPLOY_BRANCH}
             cat > .env <<'ENVEOF'
             DB_USER=${{ secrets.DB_USER }}
             DB_PASSWORD=${{ secrets.DB_PASSWORD }}
