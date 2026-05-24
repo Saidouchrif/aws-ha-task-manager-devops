@@ -16,6 +16,7 @@ env:
   DEPLOY_PATH: /home/ubuntu/aws-ha-task-manager-devops
   DEPLOY_BRANCH: pre/production
   REPO_URL: https://github.com/Saidouchrif/aws-ha-task-manager-devops.git
+  FRONTEND_API_URL: http://ha-load-balancer-113284686.us-east-1.elb.amazonaws.com:5000
 
 jobs:
   test-suite:
@@ -101,6 +102,9 @@ jobs:
             DB_NAME=${{ secrets.DB_NAME }}
             JWT_SECRET=${{ secrets.JWT_SECRET }}
             ENVEOF
+            cat > Frontend/.env <<'ENVEOF'
+            VITE_API_URL=${FRONTEND_API_URL}
+            ENVEOF
             sudo docker-compose -f docker-compose.app.yml down
             sudo docker-compose -f docker-compose.app.yml up -d --build
           EOF
@@ -138,6 +142,9 @@ jobs:
             DB_PASSWORD=${{ secrets.DB_PASSWORD }}
             DB_NAME=${{ secrets.DB_NAME }}
             JWT_SECRET=${{ secrets.JWT_SECRET }}
+            ENVEOF
+            cat > Frontend/.env <<'ENVEOF'
+            VITE_API_URL=${FRONTEND_API_URL}
             ENVEOF
             sudo docker-compose -f docker-compose.app.yml down
             sudo docker-compose -f docker-compose.app.yml up -d --build

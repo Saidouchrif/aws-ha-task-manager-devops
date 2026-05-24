@@ -2,17 +2,14 @@
 
 const stripTrailingSlash = (value) => value.replace(/\/$/, "");
 
-const resolveBaseURL = () => {
-  if (import.meta.env.VITE_API_URL) {
-    return stripTrailingSlash(import.meta.env.VITE_API_URL);
-  }
+const rawApiUrl = import.meta.env.VITE_API_URL;
 
-  const { protocol, hostname } = window.location;
-  return `${protocol}//${hostname}:5000`;
-};
+if (!rawApiUrl) {
+  throw new Error("Missing VITE_API_URL");
+}
 
 const api = axios.create({
-  baseURL: resolveBaseURL(),
+  baseURL: stripTrailingSlash(rawApiUrl),
   timeout: 10000,
 });
 
