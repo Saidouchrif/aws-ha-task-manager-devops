@@ -101,7 +101,7 @@ jobs:
             DB_NAME=${{ secrets.DB_NAME }}
             JWT_SECRET=${{ secrets.JWT_SECRET }}
             ENVEOF
-            echo "VITE_API_URL=http://ha-load-balancer-113284686.us-east-1.elb.amazonaws.com:5000" > Frontend/.env
+            echo "VITE_API_URL=http://ha-load-balancer-113284686.us-east-1.elb.amazonaws.com" > Frontend/.env
             sudo docker-compose -f docker-compose.app.yml down
             sudo docker system prune -af
             sudo docker-compose -f docker-compose.app.yml up -d --build
@@ -142,7 +142,7 @@ jobs:
             DB_NAME=${{ secrets.DB_NAME }}
             JWT_SECRET=${{ secrets.JWT_SECRET }}
             ENVEOF
-            echo "VITE_API_URL=http://ha-load-balancer-113284686.us-east-1.elb.amazonaws.com:5000" > Frontend/.env
+            echo "VITE_API_URL=http://ha-load-balancer-113284686.us-east-1.elb.amazonaws.com" > Frontend/.env
             sudo docker-compose -f docker-compose.app.yml down
             sudo docker system prune -af
             sudo docker-compose -f docker-compose.app.yml up -d --build

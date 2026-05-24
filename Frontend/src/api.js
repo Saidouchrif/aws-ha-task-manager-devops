@@ -9,7 +9,7 @@ const resolveApiUrl = () => {
     return stripTrailingSlash(envApiUrl);
   }
 
-  const fallbackApiUrl = `${window.location.protocol}//${window.location.hostname}:5000`;
+  const fallbackApiUrl = `${window.location.protocol}//${window.location.hostname}`;
   console.warn("VITE_API_URL is missing. Falling back to:", fallbackApiUrl);
   return fallbackApiUrl;
 };
