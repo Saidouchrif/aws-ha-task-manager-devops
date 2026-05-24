@@ -6,7 +6,7 @@ import babel from '@rolldown/plugin-babel'
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '')
   const allowAllHosts = env.VITE_ALLOW_ALL_HOSTS === 'true'
-  const apiProxyTarget = env.VITE_INTERNAL_API_URL || 'http://backend:5000'
+  const apiProxyTarget = env.VITE_INTERNAL_API_URL || 'http://backend_api:5000'
 
   const apiProxy = {
     '/api': {
