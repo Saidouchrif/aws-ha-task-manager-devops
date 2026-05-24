@@ -4,7 +4,7 @@ import babel from '@rolldown/plugin-babel'
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, process.cwd(), '')
+  const env = loadEnv(mode, '.', '')
   const allowAllHosts = env.VITE_ALLOW_ALL_HOSTS === 'true'
 
   return {
